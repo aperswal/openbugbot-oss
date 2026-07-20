@@ -20,6 +20,9 @@ import (
 const (
 	maxFindings   = 8
 	reviewTimeout = 12 * time.Minute
+	// Each focused candidate gets its own budget well inside reviewTimeout, so one slow xhigh
+	// run leaves the verifier stage real time instead of eating the whole review window.
+	candidateTimeout = 7 * time.Minute
 )
 
 type reviewRequest struct {
@@ -199,16 +202,23 @@ func runCandidateReviews(
 
 	combined := modelOutput{}
 	var firstError error
+	succeeded := 0
 	for result := range results {
 		if result.err != nil {
+			// A single slow or failed reviewer must not kill the whole review: the verifier
+			// filters candidates anyway, so proceed with whichever focuses finished (proven
+			// live when one of nine xhigh reviewers outlived the entire review budget and
+			// took the other eight completed reviews down with it).
+			fmt.Fprintf(os.Stderr, "openbugbot-reviewer: %s reviewer failed: %v\n", result.focus, result.err)
 			if firstError == nil {
 				firstError = fmt.Errorf("%s reviewer: %w", result.focus, result.err)
 			}
 			continue
 		}
+		succeeded++
 		combined.Findings = append(combined.Findings, result.output.Findings...)
 	}
-	if firstError != nil {
+	if succeeded == 0 && firstError != nil {
 		return modelOutput{}, firstError
 	}
 	combined.Findings = candidateFindings(combined.Findings, changedLines)
@@ -219,6 +229,8 @@ func runCandidateReview(
 	ctx context.Context,
 	workDir, repoDir, auth, diffPath, focus string,
 ) candidateReview {
+	ctx, cancel := context.WithTimeout(ctx, candidateTimeout)
+	defer cancel()
 	dir, err := os.MkdirTemp(workDir, "codex-agent-")
 	if err != nil {
 		return candidateReview{focus: focus, err: fmt.Errorf("create agent state: %w", err)}
