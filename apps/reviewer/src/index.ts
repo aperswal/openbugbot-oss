@@ -347,10 +347,17 @@ async function githubInstallationToken(
   env: Env,
 ): Promise<string> {
   const jwt = await githubAppJWT(env);
+  // The job token is minted WEAKER than the app's own grant: it rides inside the review
+  // container embedded in the clone's git config, next to a model reading untrusted repo text,
+  // so even when the app holds contents WRITE (required for its reviews to count as
+  // write-access approvals), this token can only read code and write reviews - never push.
   const response = await fetch(
     `${githubAPI}/app/installations/${installationID}/access_tokens`,
     {
-      headers: githubHeaders(jwt),
+      body: JSON.stringify({
+        permissions: { contents: "read", pull_requests: "write" },
+      }),
+      headers: { ...githubHeaders(jwt), "content-type": "application/json" },
       method: "POST",
     },
   );
