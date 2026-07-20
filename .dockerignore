@@ -1,0 +1,16 @@
+.git
+.github
+.terraform
+.DS_Store
+node_modules
+apps
+bin
+infra/.terraform
+infra/.terraform.lock.hcl
+*.pem
+*.key
+.env*
+**/.next
+**/.open-next
+**/.wrangler
+**/coverage

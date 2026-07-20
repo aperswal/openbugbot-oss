@@ -1,0 +1,21 @@
+{
+  "name": "@openbugbot/reviewer",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "pnpm run typecheck && pnpm run test",
+    "deploy": "pnpm --dir ../.. deploy:reviewer",
+    "dev": "wrangler dev",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260715.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.111.0"
+  }
+}

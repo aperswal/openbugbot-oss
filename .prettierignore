@@ -1,0 +1,9 @@
+node_modules
+coverage
+.next
+.open-next
+.wrangler
+.turbo
+tmp
+wrangler.generated.jsonc
+pnpm-lock.yaml

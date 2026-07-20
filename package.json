@@ -1,0 +1,36 @@
+{
+  "name": "openbugbot",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted Codex pull-request reviews with a GitHub App and Cloudflare Containers.",
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "clean": "pnpm -r --if-present clean",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "prepare": "husky",
+    "deploy:reviewer": "./scripts/deploy-reviewer.sh",
+    "dev:reviewer": "pnpm --filter @openbugbot/reviewer dev",
+    "setup:dev-vars": "sh ./scripts/write-local-dev-vars.sh",
+    "test": "pnpm --filter @openbugbot/reviewer test",
+    "typecheck": "pnpm --filter @openbugbot/reviewer typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.13.3",
+    "eslint": "9.39.5",
+    "globals": "17.7.0",
+    "husky": "9.1.7",
+    "prettier": "3.9.5",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "openbugbot-reviewer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "openbugbot",
+      "database_id": "REPLACE_WITH_TERRAFORM_OUTPUT",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "REVIEW_JOBS",
+        "queue": "openbugbot-review-jobs",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "openbugbot-review-jobs",
+        "max_batch_size": 1,
+        "max_retries": 2,
+        "retry_delay": 30,
+      },
+    ],
+  },
+  "containers": [
+    {
+      "class_name": "ReviewContainer",
+      "image": "../../Dockerfile.reviewer",
+      "max_instances": 25,
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REVIEW_CONTAINER",
+        "class_name": "ReviewContainer",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ReviewContainer"],
+    },
+  ],
+}
