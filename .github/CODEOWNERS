@@ -1,0 +1,3 @@
+# Every path requires the owner's review: with require_code_owner_review on the main ruleset,
+# no other account's approval can satisfy the merge gate.
+* @aperswal
