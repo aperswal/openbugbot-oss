@@ -262,13 +262,17 @@ func checkoutPR(ctx context.Context, repoDir string, job reviewRequest) error {
 		Path:   "/" + job.Repository + ".git",
 		User:   url.UserPassword("x-access-token", job.InstallationToken),
 	}).String()
-	if _, err := commandOutput(ctx, "", "git", "clone", "--depth=1", "--no-single-branch", remote, repoDir); err != nil {
+	// Blob-filtered FULL-history clone, never a shallow one: the review diff is the three-dot
+	// base...head, which needs the merge base, and depth-limited fetches cut the history so the
+	// two refs share no commit ("no merge base", proven on a live PR). The blob filter keeps the
+	// clone fast; checkout materializes only the files the review actually reads.
+	if _, err := commandOutput(ctx, "", "git", "clone", "--filter=blob:none", "--no-single-branch", remote, repoDir); err != nil {
 		return retryableError("clone pull request", err)
 	}
-	if _, err := commandOutput(ctx, repoDir, "git", "fetch", "--depth=1", "origin", "pull/"+fmt.Sprint(job.PRNumber)+"/head:refs/heads/openbugbot-pr"); err != nil {
+	if _, err := commandOutput(ctx, repoDir, "git", "fetch", "origin", "pull/"+fmt.Sprint(job.PRNumber)+"/head:refs/heads/openbugbot-pr"); err != nil {
 		return retryableError("fetch pull request", err)
 	}
-	if _, err := commandOutput(ctx, repoDir, "git", "fetch", "--depth=1", "origin", job.BaseRef); err != nil {
+	if _, err := commandOutput(ctx, repoDir, "git", "fetch", "origin", job.BaseRef); err != nil {
 		return retryableError("fetch base branch", err)
 	}
 	if _, err := commandOutput(ctx, repoDir, "git", "checkout", "--detach", "openbugbot-pr"); err != nil {

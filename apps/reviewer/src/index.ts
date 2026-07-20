@@ -55,7 +55,9 @@ const githubAPI = "https://api.github.com";
 
 export class ReviewContainer extends Container {
   defaultPort = 8080;
-  sleepAfter = "20s";
+  // Must outlive the container's 12-minute review timeout: a shorter window reaps the container
+  // mid-review if activity renewal ever lapses while the /review request is in flight.
+  sleepAfter = "15m";
 }
 
 export default {
@@ -75,6 +77,12 @@ export default {
       try {
         await runReview(message.body, env);
       } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        // Without this line a failed review is invisible from outside: the tail shows container
+        // boots and stops but never why (proven while diagnosing a permissions failure live).
+        console.error(
+          `review ${message.body.runID} attempt ${message.attempts} failed: ${reason}`,
+        );
         const retryable = isRetryable(error);
         if (retryable && message.attempts <= 2) {
           await updateRun(
@@ -88,7 +96,7 @@ export default {
         }
 
         await updateRun(env, message.body.runID, "failed", message.attempts);
-        await commentReviewFailure(message.body, env);
+        await commentReviewFailure(message.body, env, reason);
         message.ack();
       }
     }
@@ -290,14 +298,21 @@ async function commentMissingAuthOnce(job: ReviewJob, env: Env): Promise<void> {
   );
 }
 
-async function commentReviewFailure(job: ReviewJob, env: Env): Promise<void> {
+async function commentReviewFailure(
+  job: ReviewJob,
+  env: Env,
+  reason: string,
+): Promise<void> {
+  // The last error rides along (truncated) so a stuck PR names its own cause instead of sending
+  // the operator to the logs; these repos are the operator's own, so the detail leaks nothing.
+  const detail = reason.length > 300 ? `${reason.slice(0, 300)}...` : reason;
   await githubRequest(
     `/repos/${job.repository}/issues/${job.prNumber}/comments`,
     job.installationID,
     env,
     {
       body: {
-        body: "OpenBugbot couldn\u2019t complete this review after retrying. Please push a new commit to retry.",
+        body: `OpenBugbot couldn\u2019t complete this review after retrying (last error: ${detail}). Please push a new commit to retry.`,
       },
       method: "POST",
     },
