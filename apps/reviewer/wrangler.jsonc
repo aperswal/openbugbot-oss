@@ -33,6 +33,9 @@
       "class_name": "ReviewContainer",
       "image": "../../Dockerfile.reviewer",
       "max_instances": 25,
+      // The unspecified default is "dev" (1/16 vCPU, 256 MiB), which starves the nine parallel
+      // codex reviewers until every one of them times out; reviews need a real instance.
+      "instance_type": "standard",
     },
   ],
   "durable_objects": {
