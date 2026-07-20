@@ -148,8 +148,14 @@ the app under the account or organization that will operate OpenBugbot.
    deployment.
 3. Generate a long random **Webhook secret**. Put the exact same value in
    `GITHUB_WEBHOOK_SECRET` in `.env`.
-4. Give the app the repository permissions OpenBugbot needs: `Contents: Read`,
-   `Pull requests: Read & write`, and `Issues: Read & write`.
+4. Give the app the repository permissions OpenBugbot needs:
+   `Contents: Read & write`, `Pull requests: Read & write`, and
+   `Issues: Read & write`. Contents needs write even though OpenBugbot never
+   pushes code: GitHub only counts an approving review toward a required-review
+   rule when the reviewer has write access, so a read-only app's LGTM cannot
+   satisfy branch protection or auto-merge. The per-review job token is still
+   minted with `contents: read`, so the container that clones and reviews your
+   code can never push, whatever the app itself is granted.
 5. Subscribe to both the **Pull request** and **Pull request review** events.
 6. Create the app and copy its **App ID** to `GITHUB_APP_ID` in `.env`.
 7. In the app's **Private keys** section, choose **Generate a private key**.
