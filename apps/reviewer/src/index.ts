@@ -225,11 +225,21 @@ async function runReview(job: ReviewJob, env: Env): Promise<void> {
     githubInstallationToken(job.installationID, env),
   ]);
   const container = getContainer(env.REVIEW_CONTAINER, job.runID);
-  const response = await container.fetch("https://review.internal/review", {
-    body: JSON.stringify({ ...job, codexAuth, installationToken }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
-  });
+  let response: Response;
+  try {
+    response = await container.fetch("https://review.internal/review", {
+      body: JSON.stringify({ ...job, codexAuth, installationToken }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+  } catch (error) {
+    // The link to the container dying mid-review (eviction, a deploy rollout, a platform blip)
+    // is transient: retry with a fresh container instead of declaring the review failed. Seen
+    // live as a "Network connection lost" failure comment on a review that would have passed.
+    throw new RetryableError(
+      error instanceof Error ? error.message : String(error),
+    );
+  }
   if (!response.ok) {
     throw new RetryableError(`container returned ${response.status}`);
   }
