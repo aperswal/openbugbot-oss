@@ -150,7 +150,7 @@ the app under the account or organization that will operate OpenBugbot.
    `GITHUB_WEBHOOK_SECRET` in `.env`.
 4. Give the app the repository permissions OpenBugbot needs: `Contents: Read`,
    `Pull requests: Read & write`, and `Issues: Read & write`.
-5. Subscribe only to the **Pull request** event.
+5. Subscribe to both the **Pull request** and **Pull request review** events.
 6. Create the app and copy its **App ID** to `GITHUB_APP_ID` in `.env`.
 7. In the app's **Private keys** section, choose **Generate a private key**.
    Move the downloaded PEM to `secrets/github-app-private-key.pem` and protect
