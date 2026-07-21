@@ -241,6 +241,68 @@ The client reads the author's existing Codex login, encrypts it with the public
 key, and sends it to your self-hosted `/enroll` endpoint. Re-enroll after that
 author logs out of Codex, revokes access, or changes Codex accounts.
 
+### Joining a repository that already has OpenBugbot
+
+Enrollment is per person, not per repository. The reviewer runs Codex on behalf
+of the pull-request author, using that author's own stored session, so an
+installation someone else made does not cover a new collaborator. Until you
+enroll, your pull requests are skipped while everyone else's are reviewed.
+
+You will see that state as a comment on your pull request:
+
+```text
+Couldn’t review this PR. Please set up OpenBugbot with `openbugbot --login`.
+```
+
+That comment is posted once per pull request, so pushing more commits does not
+repeat it. Draft pull requests are ignored entirely and get no comment at all.
+
+`openbugbot --login` in that message is the command above:
+`go run ./cmd/openbugbot --login` from a clone of this repository, or the same
+binary after `go build -o openbugbot ./cmd/openbugbot`. Either form reads the
+client environment variables below, so run it from a shell that has them set.
+
+Enrolling needs far less than the operator install in section 1: a clone of
+this repository, Go, the `codex` CLI, and the `gh` CLI. You do not need Docker,
+Terraform, Node, a Cloudflare account, or any permission on the repository
+beyond the access you already have.
+
+Ask the operator for two things, neither of them secret: the deployment's
+`/enroll` URL and the encryption **public** PEM file. Put them in a local
+`.env.client` copied from `.env.client.example`, put the PEM at the configured
+path, and run the four commands above. `codex login` creates the credential
+that is enrolled, `~/.codex/auth.json`. `gh auth login` supplies the GitHub
+token that proves who you are; the deployment resolves your login from that
+token, so you can only ever enroll yourself. The client encrypts the Codex
+session with the public key before anything leaves your machine, and the
+deployment stores only that encrypted envelope. Its Worker holds the private
+key, so enrolling means trusting whoever operates that deployment with a Codex
+session.
+
+A successful run prints:
+
+```text
+Codex auth stored securely and enrolled for @<your-login>. OpenBugbot will now review their eligible pull requests automatically.
+```
+
+One enrollment covers every repository that deployment reviews, because the
+row is keyed on your GitHub login alone. A different self-hosted deployment
+has its own database and key pair, so enroll again against that deployment's
+`/enroll` URL and public PEM.
+
+There is no confirmation comment; the review itself is the signal. To check it
+worked, push a new commit to the pull request. Reviews are deduplicated on
+repository, pull-request number, and head SHA, so a commit that already
+received a review is never reviewed again — use a new commit rather than
+reopening the pull request.
+
+Running `--login` again replaces the stored session. You normally do not have
+to: when Codex rotates the session during a review, the deployment re-encrypts
+and stores the new one. Removing an enrollment is not self-service. Revoke the
+session on the Codex side, and ask the operator to delete your row from the
+deployment's D1 database. Deleting the local encrypted copy at
+`~/.openbugbot/codex-auth.enc` does not unenroll you.
+
 If a PR does not receive a review, first check the GitHub App's **Advanced →
 Recent Deliveries** page: the app must be installed on that repository, the
 webhook must point to `/github/webhook`, and the delivery needs a successful
